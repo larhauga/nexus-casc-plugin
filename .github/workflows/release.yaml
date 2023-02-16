@@ -32,4 +32,5 @@ jobs:
       - name: release
         uses: ncipollo/release-action@v1.12.0
         id: create_release
-        artifacts: 'staging/*'
+        with:
+          artifacts: 'staging/*'
