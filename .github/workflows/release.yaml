@@ -12,21 +12,24 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
+      contents: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Set up JDK 1.8
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
-      - run: ./mvnw -B package --file pom.xml
-      - run: mkdir staging && cp target/*.kar staging
-      - name: Upload the artifacts
-        uses: skx/github-action-publish-binaries@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: 'staging/*'
+
+      - name: Build
+        run: ./mvnw -B package --file pom.xml
+
+      - name: Stage
+        run: mkdir staging && cp target/*.kar staging
+
+      - name: release
+        uses: ncipollo/release-action@v1.12.0
+        id: create_release
+        artifacts: 'staging/*'
