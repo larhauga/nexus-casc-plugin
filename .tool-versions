@@ -1,7 +1,7 @@
 docker-compose 1.29.2
 editorconfig-checker 2.7.0
 hadolint 2.12.0
-java temurin-8.0.352+8
+java temurin-8.0.362+9
 python system
 shellcheck 0.9.0
 shfmt 3.6.0
