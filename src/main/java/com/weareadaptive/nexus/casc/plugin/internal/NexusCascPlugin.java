@@ -3,7 +3,6 @@ package com.weareadaptive.nexus.casc.plugin.internal;
 import com.weareadaptive.nexus.casc.plugin.internal.config.*;
 import org.apache.shiro.util.ThreadContext;
 import org.eclipse.sisu.Description;
-import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.sonatype.nexus.CoreApi;
 import org.sonatype.nexus.blobstore.api.BlobStore;
 import org.sonatype.nexus.blobstore.api.BlobStoreConfiguration;
@@ -21,7 +20,6 @@ import org.sonatype.nexus.repository.Repository;
 import org.sonatype.nexus.repository.routing.*;
 import org.sonatype.nexus.repository.config.Configuration;
 import org.sonatype.nexus.repository.manager.RepositoryManager;
-import org.sonatype.nexus.repository.security.RepositoryPermissionChecker;
 import org.sonatype.nexus.security.SecurityApi;
 import org.sonatype.nexus.security.SecuritySystem;
 import org.sonatype.nexus.security.authz.AuthorizationManager;
@@ -67,8 +65,6 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
     private final RealmManager realmManager;
     private final CapabilityRegistry capabilityRegistry;
     private final RoutingRuleStore routingRuleStore;
-    private final RoutingRuleHelper routingRuleHelper;
-    private final RepositoryPermissionChecker repositoryPermissionChecker;
 
     @Inject
     public NexusCascPlugin(
@@ -82,9 +78,7 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
             final BlobStoreManager blobStoreManager,
             final RealmManager realmManager,
             final CapabilityRegistry capabilityRegistry,
-            final RoutingRuleStore routingRuleStore,
-            final RoutingRuleHelper routingRuleHelper,
-            final RepositoryPermissionChecker repositoryPermissionChecker
+            final RoutingRuleStore routingRuleStore
         ) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         this.baseUrlManager = baseUrlManager;
         this.coreApi = coreApi;
@@ -97,8 +91,6 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
         this.realmManager = realmManager;
         this.capabilityRegistry = capabilityRegistry;
         this.routingRuleStore = routingRuleStore;
-        this.routingRuleHelper = routingRuleHelper;
-        this.repositoryPermissionChecker = repositoryPermissionChecker;
     }
 
     @Override
@@ -397,12 +389,6 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
 
         if (repository.getRoutingRules() != null && !repository.getRoutingRules().isEmpty()) {
             repository.getRoutingRules().forEach(this::applyRoutingRuleConfig);
-            routingRuleStore.list().forEach(existingRule -> {
-                if (repository.getRoutingRules().stream().noneMatch(rr -> existingRule.name().equals(rr.getName()))) {
-                    log.info("Pruning routing rule {}", existingRule.name());
-                    routingRuleStore.delete(existingRule);
-                }
-            });
         }
 
         if (repository.getRepositories() != null) {
@@ -473,6 +459,24 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
             }
         } else if (repository.getPruneRepositories() != null && repository.getPruneRepositories()) {
             log.warn("repository.pruneRepositories has no effect when no repositories are configured!");
+        }
+
+        // Prune routing rules that are not in use
+        if (repository.getRoutingRules() != null && !repository.getRoutingRules().isEmpty()) {
+            List<EntityId> existingRoutingRuleIdsInUse = new ArrayList<>();
+            repositoryManager.browse().forEach(existingRepo -> {
+                existingRoutingRuleIdsInUse.add(existingRepo.getConfiguration().getRoutingRuleId());
+            });
+            routingRuleStore.list().forEach(existingRule -> {
+                if (repository.getRoutingRules().stream().noneMatch(rr -> existingRule.name().equals(rr.getName()))) {
+                    if (existingRoutingRuleIdsInUse.stream().noneMatch(id -> id.equals(existingRule.id()))) {
+                        log.info("Pruning routing rule {}", existingRule.name());
+                        routingRuleStore.delete(existingRule);
+                    } else {
+                        log.error("Routing rule {} is still in use", existingRule.name());
+                    }
+                }
+            });
         }
 
         // we prune blob stores here as pruned repos might rely on them
