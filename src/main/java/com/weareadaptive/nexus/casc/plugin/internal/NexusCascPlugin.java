@@ -3,6 +3,7 @@ package com.weareadaptive.nexus.casc.plugin.internal;
 import com.weareadaptive.nexus.casc.plugin.internal.config.*;
 import org.apache.shiro.util.ThreadContext;
 import org.eclipse.sisu.Description;
+import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.sonatype.nexus.CoreApi;
 import org.sonatype.nexus.blobstore.api.BlobStore;
 import org.sonatype.nexus.blobstore.api.BlobStoreConfiguration;
@@ -14,10 +15,13 @@ import org.sonatype.nexus.cleanup.storage.CleanupPolicyStorage;
 import org.sonatype.nexus.common.app.BaseUrlManager;
 import org.sonatype.nexus.common.app.ManagedLifecycle;
 import org.sonatype.nexus.common.app.NotWritableException;
+import org.sonatype.nexus.common.entity.EntityId;
 import org.sonatype.nexus.common.stateguard.StateGuardLifecycleSupport;
 import org.sonatype.nexus.repository.Repository;
+import org.sonatype.nexus.repository.routing.*;
 import org.sonatype.nexus.repository.config.Configuration;
 import org.sonatype.nexus.repository.manager.RepositoryManager;
+import org.sonatype.nexus.repository.security.RepositoryPermissionChecker;
 import org.sonatype.nexus.security.SecurityApi;
 import org.sonatype.nexus.security.SecuritySystem;
 import org.sonatype.nexus.security.authz.AuthorizationManager;
@@ -62,6 +66,9 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
     private final BlobStoreManager blobStoreManager;
     private final RealmManager realmManager;
     private final CapabilityRegistry capabilityRegistry;
+    private final RoutingRuleStore routingRuleStore;
+    private final RoutingRuleHelper routingRuleHelper;
+    private final RepositoryPermissionChecker repositoryPermissionChecker;
 
     @Inject
     public NexusCascPlugin(
@@ -74,7 +81,11 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
             final RepositoryManager repositoryManager,
             final BlobStoreManager blobStoreManager,
             final RealmManager realmManager,
-            final CapabilityRegistry capabilityRegistry) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+            final CapabilityRegistry capabilityRegistry,
+            final RoutingRuleStore routingRuleStore,
+            final RoutingRuleHelper routingRuleHelper,
+            final RepositoryPermissionChecker repositoryPermissionChecker
+        ) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         this.baseUrlManager = baseUrlManager;
         this.coreApi = coreApi;
         this.securityApi = securityApi;
@@ -85,6 +96,9 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
         this.repositoryManager = repositoryManager;
         this.realmManager = realmManager;
         this.capabilityRegistry = capabilityRegistry;
+        this.routingRuleStore = routingRuleStore;
+        this.routingRuleHelper = routingRuleHelper;
+        this.repositoryPermissionChecker = repositoryPermissionChecker;
     }
 
     @Override
@@ -381,6 +395,16 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
             log.warn("repository.pruneCleanupPolicies has no effect when no cleanup policies are configured!");
         }
 
+        if (repository.getRoutingRules() != null && !repository.getRoutingRules().isEmpty()) {
+            repository.getRoutingRules().forEach(this::applyRoutingRuleConfig);
+            routingRuleStore.list().forEach(existingRule -> {
+                if (repository.getRoutingRules().stream().noneMatch(rr -> existingRule.name().equals(rr.getName()))) {
+                    log.info("Pruning routing rule {}", existingRule.name());
+                    routingRuleStore.delete(existingRule);
+                }
+            });
+        }
+
         if (repository.getRepositories() != null) {
             repository.getRepositories().forEach(repoConfig -> {
                 Repository existingRepo = repositoryManager.get(repoConfig.getName());
@@ -395,6 +419,16 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
                     log.info("repo config: {}", configuration);
 
                     configuration.setAttributes(repoConfig.getAttributes());
+
+                    if ( repoConfig.getRoutingRuleName() != null) {
+                        String ruleName = repoConfig.getRoutingRuleName();
+                        RoutingRule rule = routingRuleStore.getByName(ruleName);
+                        if (rule != null) {
+                            configuration.setRoutingRuleId(rule.id());
+                        } else {
+                            log.error("Routing rule {} does not exist", ruleName);
+                        }
+                    }
 
                     patchRepoAttributes(repoConfig.getAttributes());
 
@@ -476,6 +510,22 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
         }
     }
 
+    private void applyRoutingRuleConfig(ConfigRoutingRule routingRuleConfig) {
+        RoutingRule existingRule = routingRuleStore.getByName(routingRuleConfig.getName());
+        if (existingRule != null) {
+            existingRule.matchers(routingRuleConfig.getMatchers());
+            existingRule.description(routingRuleConfig.getDescription());
+            existingRule.mode(RoutingMode.valueOf(routingRuleConfig.getMode()));
+            routingRuleStore.update(existingRule);
+        } else {
+            RoutingRule rule = routingRuleStore.newRoutingRule()
+                .name(routingRuleConfig.getName())
+                .description(routingRuleConfig.getDescription())
+                .mode(RoutingMode.valueOf(routingRuleConfig.getMode()))
+                .matchers(routingRuleConfig.getMatchers());
+            routingRuleStore.create(rule);
+        }
+    }
     /**
      * Apply all configs related to security
      *

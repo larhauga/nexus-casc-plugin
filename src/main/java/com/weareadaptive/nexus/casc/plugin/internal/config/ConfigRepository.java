@@ -10,6 +10,8 @@ public class ConfigRepository {
     private Boolean pruneRepositories;
     private List<ConfigRepositoryEntry> repositories;
 
+    private List<ConfigRoutingRule> routingRules;
+
     public Boolean getPruneBlobStores() {
         return pruneBlobStores;
     }
@@ -57,4 +59,13 @@ public class ConfigRepository {
     public void setRepositories(List<ConfigRepositoryEntry> repositories) {
         this.repositories = repositories;
     }
+
+    public List<ConfigRoutingRule> getRoutingRules() {
+        return routingRules;
+    }
+
+    public void setRoutingRules(List<ConfigRoutingRule> routingRules) {
+        this.routingRules = routingRules;
+    }
+
 }

@@ -1,5 +1,7 @@
 package com.weareadaptive.nexus.casc.plugin.internal.config;
 
+import org.sonatype.nexus.common.entity.EntityId;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,6 +10,8 @@ public class ConfigRepositoryEntry {
     private String recipeName;
     private Boolean online;
     private Map<String, Map<String, Object>> attributes = new HashMap<>();
+
+    private String routingRuleName;
 
     public String getName() {
         return name;
@@ -40,4 +44,12 @@ public class ConfigRepositoryEntry {
     public void setAttributes(Map<String, Map<String, Object>> attributes) {
         this.attributes = attributes;
     }
+    public String getRoutingRuleName() {
+        return routingRuleName;
+    }
+
+    public void setRoutingRuleName(String routingRuleName) {
+        this.routingRuleName = routingRuleName;
+    }
+
 }
