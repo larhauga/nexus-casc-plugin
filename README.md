@@ -6,11 +6,10 @@ This plugin allows to specify a YAML file to configure a Nexus instance on start
 
 This repository maintains a fork with releases kept in track with the nexus releases.
 
-
 ## Why Fork?
 
-Forked from: https://github.com/AdaptiveConsulting/nexus-casc-plugin
-Who forked from: https://github.com/sventschui/nexus-casc-plugin
+Forked from: <https://github.com/AdaptiveConsulting/nexus-casc-plugin>
+Who forked from: <https://github.com/sventschui/nexus-casc-plugin>
 
 The original provider was unable to maintain the project
 
@@ -26,16 +25,19 @@ The original provider was unable to maintain the project
 ## Building
 
 Requires:
+
 * Java 8 JDK (OpenJDK is fine)
 * Maven (3.6.3 or higher preferred)
 * docker-compose (only if running the integration tests)
 
 To just build the `.kar` archive:
+
 ```bash
 ./mvnw package
 ```
 
 To build the `.kar` archive and execute the (limited!) integration tests via `docker-compose`:
+
 ```bash
 ./mvnw verify
 ```
@@ -61,6 +63,7 @@ There is a `docker-compose.yml` file with all the necessary to test this. The te
 is located in the `password_johndoe` file. The YAML configuration is located in `default-nexus.yml`. It has a non-working
 proxy configuration just to test its configuration. Removing `httpProxy` and/or `httpsProxy` entirely will also clear the relevant
 proxy settings on the next boot.
+
 ```shell
 ./mvnw package
 docker-compose run nexus
@@ -128,10 +131,10 @@ security:
           role: nx-admin
 ```
 
-
 #### Repository
 
 for any repositories that require authentication it looks like this:
+
 ```yaml
 repository:
   repositories:

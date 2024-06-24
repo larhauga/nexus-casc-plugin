@@ -14,17 +14,17 @@ import java.util.regex.Pattern;
 @Named
 public class Interpolator extends ComponentSupport {
     public String interpolate(String str) {
-        String pattern = "\\$(([A-Z0-9_]+)|\\{([^:}]+)(:(\"([^\"}]*)\"|([^}]*)))?})";
-        Pattern expr = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
+        String pattern = "(^\\s+)?\\$(([A-Z0-9_]+)|\\{([^:}]+)(:(\"([^\"}]*)\"|([^}]*)))?})";
+        Pattern expr = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
         Matcher matcher = expr.matcher(str);
         while (matcher.find()) {
-            String varName = matcher.group(2);
+            String varName = matcher.group(3);
             if (varName == null) {
-                varName = matcher.group(3);
+                varName = matcher.group(4);
             }
-            String defaultValue = matcher.group(6);
+            String defaultValue = matcher.group(7);
             if (defaultValue == null) {
-                defaultValue = matcher.group(7);
+                defaultValue = matcher.group(8);
             }
 
             String value = null;
@@ -58,6 +58,18 @@ public class Interpolator extends ComponentSupport {
                 }
 
                 value = defaultValue;
+            }
+
+            // If the variable is prefixed with only whitespaces, we need to prefix all lines in
+            // the value with the same whitespaces to keep the indentation.
+            String prefixWhitespaces = matcher.group(1);
+            if (prefixWhitespaces != null) {
+                String[] lines = value.split("\r\n|\r|\n");
+                StringBuilder sb = new StringBuilder();
+                for (String line : lines) {
+                    sb.append(prefixWhitespaces).append(line).append(System.lineSeparator());
+                }
+                value = sb.toString();
             }
 
             Pattern subexpr = Pattern.compile(Pattern.quote(matcher.group(0)));

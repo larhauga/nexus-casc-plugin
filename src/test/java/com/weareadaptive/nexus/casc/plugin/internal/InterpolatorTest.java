@@ -14,6 +14,8 @@ class InterpolatorTest {
     @Test
     void interpolateWithFile() {
         assertEquals("hello world", new Interpolator().interpolate("hello ${file:" + getClass().getClassLoader().getResource("test").getPath() + "}"));
+        assertEquals("hello\nworld", new Interpolator().interpolate("${file:" + getClass().getClassLoader().getResource("test.multiline").getPath() + "}"));
+        assertEquals("  hello\n  world\n", new Interpolator().interpolate("  ${file:" + getClass().getClassLoader().getResource("test.multiline").getPath() + "}"));
     }
 
     @Test

@@ -280,7 +280,8 @@ repository:
         apt:
           distribution: focal
         aptSigning:
-          keypair: "${file:/run/secrets/gpg_key_example}"
+          keypair: |
+            ${file:/run/secrets/gpg_key_example}
           passphrase: "${file:/run/secrets/gpg_passphrase_example}"
         storage:
           blobStoreName: apt
@@ -296,7 +297,8 @@ repository:
         apt:
           distribution: focal
         aptSigning:
-          keypair: "${file:/run/secrets/gpg_key_example}"
+          keypair: |
+            ${file:/run/secrets/gpg_key_example}
           passphrase: "${file:/run/secrets/gpg_passphrase_example}"
         proxy:
           contentMaxAge: -1
@@ -762,7 +764,8 @@ repository:
           repodataDepth: 3
           deployPolicy: STRICT  # PERMISSIVE for maven yum deployment
         yumSigning:
-          keypair: "${file:/run/secrets/gpg_key_example}"
+          keypair: |
+            ${file:/run/secrets/gpg_key_example}
           passphrase: "${file:/run/secrets/gpg_passphrase_example}"
         httpclient:
           blocked: false
@@ -792,7 +795,8 @@ repository:
             - yum-hosted
             - yum-centos
         yumSigning:
-          keypair: "${file:/run/secrets/gpg_key_example}"
+          keypair: |
+            ${file:/run/secrets/gpg_key_example}
           passphrase: "${file:/run/secrets/gpg_passphrase_example}"
         storage:
           blobStoreName: yum
