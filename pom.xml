@@ -24,7 +24,7 @@
 
         <snakeyaml.version>2.2</snakeyaml.version>
 
-        <junit-jupiter.version>5.10.3</junit-jupiter.version>
+        <junit-jupiter.version>5.11.1</junit-jupiter.version>
         <system-lambda.version>1.2.1</system-lambda.version>
 
         <kar.finalName>${project.artifactId}-${project.version}</kar.finalName>
