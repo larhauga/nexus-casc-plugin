@@ -22,7 +22,7 @@
         <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
         <docker-compose-maven-plugin.version>4.0.0</docker-compose-maven-plugin.version>
 
-        <snakeyaml.version>2.3</snakeyaml.version>
+        <snakeyaml.version>2.4</snakeyaml.version>
 
         <junit-jupiter.version>5.11.4</junit-jupiter.version>
         <system-lambda.version>1.2.1</system-lambda.version>
