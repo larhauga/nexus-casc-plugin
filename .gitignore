@@ -4,3 +4,6 @@
 target/
 /.env
 /.direnv/
+.vscode/
+bin/
+.*.swp

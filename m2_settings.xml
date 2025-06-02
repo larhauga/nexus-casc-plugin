@@ -1,0 +1,40 @@
+<!--
+ 0. this goes to ~/.m2/settings.xml
+ 1. always use FQDN addresses, like myserver.corp.example.com
+ 2. review also ~/.mavenrc file
+-->
+<settings>
+        <mirrors>
+                <mirror>
+                        <id>myregistry</id>
+                        <name>myregistry</name>
+                        <url>https://repo.maven.apache.org/maven2</url>
+                        <mirrorOf>central</mirrorOf>
+                </mirror>
+                <!--mirror>
+                        <id>myfullmirror</id>
+                        <name>myfullmirror</name>
+                        <url>http://myfullmirror.corp.example.com</url>
+                        <mirrorOf>*</mirrorOf>
+                </mirror-->
+	</mirrors>
+        <!-- <proxies>
+          <proxy>
+            <id>myhttpproxy</id>
+            <active>true</active>
+            <protocol>http</protocol>
+            <host>myhttpproxy.example.com</host>
+            <port>8080</port>
+            <nonProxyHosts>*.example.com|*.example.org</nonProxyHosts>
+          </proxy>
+          <proxy>
+            <id>myhttpproxy</id>
+            <active>true</active>
+            <protocol>https</protocol>
+            <host>myhttpproxy.example.com</host>
+            <port>8080</port>
+            <nonProxyHosts>*.example.com|*.example.org</nonProxyHosts>
+          </proxy>
+        </proxies> -->
+</settings>
+

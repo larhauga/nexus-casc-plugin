@@ -469,7 +469,7 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
             });
             routingRuleStore.list().forEach(existingRule -> {
                 if (repository.getRoutingRules().stream().noneMatch(rr -> existingRule.name().equals(rr.getName()))) {
-                    if (existingRoutingRuleIdsInUse.stream().noneMatch(id -> id.equals(existingRule.id()))) {
+                    if (existingRoutingRuleIdsInUse.stream().noneMatch(id -> existingRule.id().equals(id))) {
                         log.info("Pruning routing rule {}", existingRule.name());
                         routingRuleStore.delete(existingRule);
                     } else {
@@ -508,7 +508,7 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
                     set.add(policyName);
                     cleanup.put("policyName", set);
                 } else if (policyName instanceof List) {
-                    cleanup.put("policyName", new HashSet<>((Collection<Object>) policyName));
+                    cleanup.put("policyName", new HashSet<>((Collection<?>) policyName));
                 }
             }
         }
@@ -732,15 +732,19 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
                     }
                 } else {
                     log.info("User {} does not yet exist. Creating it...", userConfig.getUsername());
-                    securityApi.addUser(
-                            userConfig.getUsername(),
-                            userConfig.getFirstName(),
-                            userConfig.getLastName(),
-                            userConfig.getEmail(),
-                            userConfig.getActive() != null ? userConfig.getActive() : true,
-                            userConfig.getPassword(),
-                            userConfig.getRoles().stream().map(ConfigSecurityUserRole::getRole).collect(toList())
-                    );
+                    try {
+                        securityApi.addUser(
+                                userConfig.getUsername(),
+                                userConfig.getFirstName(),
+                                userConfig.getLastName(),
+                                userConfig.getEmail(),
+                                userConfig.getActive() != null ? userConfig.getActive() : true,
+                                userConfig.getPassword(),
+                                userConfig.getRoles().stream().map(ConfigSecurityUserRole::getRole).collect(toList())
+                        );
+                    } catch (NoSuchUserManagerException e) {
+                        log.error("Could not create user {}: {}", userConfig.getUsername(), e.getMessage());
+                    }
                 }
             });
 
@@ -763,3 +767,4 @@ public class NexusCascPlugin extends StateGuardLifecycleSupport {
         }
     }
 }
+

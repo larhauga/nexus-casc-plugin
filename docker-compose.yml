@@ -1,18 +1,49 @@
 ---
 # Useful for local debugging of the scripts.
-version: '3.8'
 
 secrets:
-  password_johndoe:
-    file: ./password_johndoe
+  password_admin:
+    file: ./password_admin
   gpg_key_example:
     file: ./gpg-example.key
   gpg_passphrase_example:
     file: ./gpg-example.passphrase
 
 services:
+
+  # Service to extract KAR file using the final image with overridden entrypoint
+  plugin-extractor:
+    image: 'researchiteng/nexus-casc-plugin:3.77.2'
+    container_name: plugin-extractor
+    volumes:
+      - ./plugin-artifacts:/opt/sonatype/nexus/deploy
+    entrypoint: /usr/local/bin/deploy-plugin.sh
+    networks:
+      - nexus
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    networks:
+      - 'nexus'
+      - 'nginx'
+    ports:
+      - "80:80"
+      - "443:443"
+      #- "8081:8081"
+      #- "8443:8443"
+    # expose:
+    #   -
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/certs:ro
+    # depends_on:
+    #   - nexus
+    # links:
+    #   - nexus
   nexus:
-    image: 'sonatype/nexus3:${NEXUS_DOCKER_VERSION}'
+    #
+    image: 'sonatype/nexus3:3.77.2' #${NEXUS_DOCKER_VERSION}'
     container_name: 'nexus'
     user: 'nexus'
     environment:
@@ -23,14 +54,15 @@ services:
     networks:
       - 'nexus'
     ports:
+      - '8081:8081'
       # - '5005:5005'
-      - '${NEXUS_UI_PORT}:8081'
+      #- '${NEXUS_UI_PORT}:8081'
       # - '18090:18090'
       # - '18091:18091'
     expose:
       - '${NEXUS_UI_PORT}'
     secrets:
-      - password_johndoe
+      - password_admin
       - gpg_key_example
       - gpg_passphrase_example
     ulimits:
@@ -38,12 +70,26 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      - './default-nexus.yml:/opt/nexus.yml:ro'
-      - './target/nexus-casc-plugin-${PLUGIN_VERSION}-bundle.kar:/opt/sonatype/nexus/deploy/nexus-casc-plugin-${PLUGIN_VERSION}-bundle.kar:ro'
-      - 'nexus-data:/nexus-data'
+      - './my-nexus.yml:/opt/nexus.yml:ro'
+      #- '/storage/nexus:/nexus-data'
+      - './nexus-data:/nexus-data' # chown 200:200 ./nexus-data OR chmod 777 ./nexus-data
+      #- './target/nexus-casc-plugin-${PLUGIN_VERSION}-bundle.kar:/opt/sonatype/nexus/deploy/nexus-casc-plugin-${PLUGIN_VERSION}-bundle.kar:ro'
+      #- './plugin-artifacts:/opt/sonatype/nexus/deploy'
+      - './plugin-artifacts/nexus-casc-plugin.kar:/opt/sonatype/nexus/deploy/nexus-casc-plugin.kar'
+    depends_on:
+      plugin-extractor:
+        condition: service_completed_successfully
 
-volumes:
-  nexus-data:
+# volumes:
+#   nexus-data:
+
+# volumes:
+#   plugin-artifacts:
+#     driver: local
 
 networks:
   nexus:
+    external: false
+  nginx:
+    external: true
+

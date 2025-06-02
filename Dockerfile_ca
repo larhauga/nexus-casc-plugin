@@ -1,0 +1,10 @@
+## if any private CA should be added
+ARG DOCKER_MIRROR="docker.io"
+ARG TARGET_IMAGE="moby/buildkit:buildx-stable-1"
+FROM ${DOCKER_MIRROR}/${TARGET_IMAGE}
+ARG CA_URL=""
+ARG CA_FILE="my-root-ca.crt"
+#COPY ${CA_FILE} /tmp/${CA_FILE}
+#RUN cat /tmp/${CA_FILE} >> /etc/ssl/certs/ca-certificates.crt
+RUN wget -q --no-check-certificate ${CA_URL} -O - >> /etc/ssl/certs/ca-certificates.crt
+RUN echo "" >> /etc/ssl/certs/ca-certificates.crt
