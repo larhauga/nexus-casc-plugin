@@ -1,0 +1,49 @@
+---
+# Useful for local debugging of the scripts.
+
+secrets:
+  password_johndoe:
+    file: ./password_johndoe
+  gpg_key_example:
+    file: ./gpg-example.key
+  gpg_passphrase_example:
+    file: ./gpg-example.passphrase
+
+services:
+  nexus:
+    image: 'sonatype/nexus3:${NEXUS_DOCKER_VERSION}'
+    container_name: 'nexus'
+    user: 'nexus'
+    environment:
+      BASE_URL: 'http://localhost:8081'
+      NEXUS_SECURITY_RANDOMPASSWORD: 'false'
+      NEXUS_CASC_CONFIG: '/opt/nexus.yml'
+      # INSTALL4J_ADD_VM_PARAMS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+    networks:
+      - 'nexus'
+    ports:
+      # - '5005:5005'
+      - '${NEXUS_UI_PORT}:8081'
+      # - '18090:18090'
+      # - '18091:18091'
+    expose:
+      - '${NEXUS_UI_PORT}'
+    secrets:
+      - password_johndoe
+      - gpg_key_example
+      - gpg_passphrase_example
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - './default-nexus.yml:/opt/nexus.yml:ro'
+      - './target/nexus-casc-plugin-${PLUGIN_VERSION}-bundle.kar:/opt/sonatype/nexus/deploy/nexus-casc-plugin-${PLUGIN_VERSION}-bundle.kar:ro'
+      - 'nexus-data:/nexus-data'
+
+volumes:
+  nexus-data:
+
+networks:
+  nexus:
+

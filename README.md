@@ -6,14 +6,25 @@ This plugin allows to specify a YAML file to configure a Nexus instance on start
 
 This repository maintains a fork with releases kept in track with the nexus releases.
 
+## NEXUS BREAKING CHANGES
+
+This plugin CANNOT be updated beyond 3.77.x.    
+Reason: complete BWC Break in OSS NEXUS 3.78.0 (March 2025):        
+"Breaking change for custom plugins: Nexus Repository migrates to Spring Boot architecture.
+Custom OSGi bundle deployment no longer supported."
+https://help.sonatype.com/en/sonatype-nexus-repository-3-78-0-release-notes.html#breaking-change-for-custom-plugins--nexus-repository-migrates-to-spring-boot-architecture    
+https://help.sonatype.com/en/sonatype-nexus-repository-3-feature-status.html#osgi-bundle-capability   
+
 ## Why Fork?
 
-Forked from: <https://github.com/AdaptiveConsulting/nexus-casc-plugin>
+Forked from: <https://github.com/larhauga/nexus-casc-plugin/>
+Who forked from: <https://github.com/AdaptiveConsulting/nexus-casc-plugin>
 Who forked from: <https://github.com/sventschui/nexus-casc-plugin>
 
-The original provider was unable to maintain the project
+The original provider was unable to maintain the project.    
+Changes in chronological order:   
 
-### Changes from the fork
+### Changes by AdaptiveConsulting fork
 
 * The groupId has changed to avoid clashing with the original project
 * The build process now produces a `.kar` archive and can be directly deployed in
@@ -22,18 +33,59 @@ The original provider was unable to maintain the project
 * Basic CI has been added
 * Releases are currently pushed to our private repository, this may change in the future
 
+### Changes by larhauga/researchiteng fork: 
+* plugin image is now also shipped as independent image, and plugin is extracted from it to a shared folder at runtime for sonatype/nexus image to mount and use.
+* docker-compose.yml is now for actual deploy, and previous dev tests one renamed to "-dev".
+
 ## Building
+As the plugin is now released as a separate image, build is required only when a new version is released.   
 
-Requires:
+Build requires either simply `docker` or, for non-docker builds: 
+* Java 17 (and 11) JDK (OpenJDK is fine)
+* Maven (3.6.3 or higher preferred). 
+* docker compose for (either integration dev tests, using docker-compose-dev.yaml )
+   
+Note: it's possible to do docker builds and extract the plugin from the image, without the need to build it locally.
 
-* Java 11 JDK (OpenJDK is fine)
-* Maven (3.6.3 or higher preferred)
-* docker-compose (only if running the integration tests)
+### build with docker single architecture
+
+```bash
+docker build --progress=plain . --build-arg ALL_PROXY="http://myhttpproxy.corp.example.com:8080" --build-arg no_proxy=".example.com" --build-arg DOCKER_MIRROR="myregistry.corp.example.com" --build-arg MAVEN_MIRROR="http://myregistry.corp.example.com:8080/repository/maven-public/" --build-arg GROOVY_MIRROR="http://myregistry.corp.example.com:8080/repository/maven-public/" --tag myregistry.corp.example.com/nexus-casc-plugin:3.77.2
+```
+
+### build with docker multi architecture
+
+Build builder context
+```bash
+docker buildx create --name multiarch-builder --driver docker-container || true # in case it already exists
+```
+
+Actual build using above builder context
+```bash
+docker buildx build . --builder multiarch-builder --platform linux/amd64,linux/arm64 --tag myregistry.corp.example.com/nexus-casc-plugin:3.77.2 --push
+```
+
+When inside a corp:
+```bash
+# buildkit with extra root ca certificate:
+docker build -f Dockerfile_ca . -t moby/buildkit:buildx-stable-1 --build-arg DOCKER_MIRROR="myregistry.corp.example.com" --build-arg CA_URL="https://myregistry.corp.example.com/my-root-ca.crt"
+
+# actual build:
+docker buildx build --builder multiarch-builder --platform linux/amd64,linux/arm64 . --build-arg ALL_PROXY="http://myhttpproxy.corp.example.com:8080" --build-arg no_proxy=".example.com" --build-arg DOCKER_MIRROR="myregistry.corp.example.com" --build-arg MAVEN_MIRROR="http://myregistry.corp.example.com:8080/repository/maven-public/" --build-arg GROOVY_MIRROR="http://myregistry.corp.example.com:8080/repository/maven-public/" --tag "myregistry.corp.example.com/nexus-casc-plugin:3.77.2"
+```
+
+### build locally instead
+
+To update the maven wrapper:
+```bash
+./mvnw wrapper:wrapper -N # -Dmaven=3.9.9
+```
 
 To just build the `.kar` archive:
 
 ```bash
-./mvnw package
+#./mvnw package
+./mvnw clean package -Dkar.finalName=nexus-casc-plugin -Daether.dependencyCollector.impl=bf -Dmaven.artifact.threads=10 --no-transfer-progress -U # -X
 ```
 
 To build the `.kar` archive and execute the (limited!) integration tests via `docker-compose`:
@@ -56,6 +108,35 @@ It expects a YAML configuration file to be mounted to `/opt/nexus.yml` (This pat
 The format of the YAML file is documented below.
 
 Start Nexus as usual.
+
+### Deploy the .kar plugin
+
+#### Using nexus-casc-plugin docker image
+
+`nexus-casc-plugin` holds only the kar file and shell script to extract it, on top of a busybox image.
+
+Use docker-compose.yml with shared folder/volume or kubernetes with shared volume like emptryDir.
+
+Ensure your persistency volume is with right nexus owership (`sudo chown 200:200 ./nexus-data`), or at least give full permissions: `chmod 777 ./nexus-data`  (Otherwise, one will get errors like: `java.nio.file.AccessDeniedException: /opt/sonatype/nesus/../sonatype-work/nexus3/`)    
+
+Example of image with nexus plugin: `docker.io/researchiteng/nexus-casc-plugin:3.77.2`
+
+How to start nexus:
+```bash
+docker network create nginx || true
+if [ ! -d ./nexus-data ]; then
+mkdir -p ./nexus-data
+sudo chown 200:200 ./nexus-data # chmod 777 ./nexus-data
+fi
+if [ ! -f password_admin ]; then
+tr -cd [:alpha:] < /dev/random | head -c12 >> ./password_admin
+fi
+docker compose up
+```
+
+#### Manual locally
+
+copy the .kar archive to the folder mounted in the `/opt/sonatype/nexus/deploy/` directory.
 
 ## Local testing
 
